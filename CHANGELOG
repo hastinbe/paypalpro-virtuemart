@@ -1,0 +1,121 @@
+###Version 1.0.4 - PayPalPro - 03-06-09 ** MODIFIED **
+
+Author: Beau Hastings (beausy at gmail dot com)
+
+Added: Implemented support for API certificate security method
+
+Modified: PayPal Live and Sandbox servers to the standard ones instead of the beta servers
+
+Notes:
+		Configurable by the payment module configuration:
+		-------------------------------------------------
+		-   1. Set 'Use Certificate' to Yes
+		-   2. Leave API Signature blank
+		-   3. Type in the full path to the API Certificate
+		-
+		- You can place the PEM certificate file anywhere you like, for example I use the following:
+		-
+		-   /var/www/vhosts/domain.tld/administrator/components/com_virtuemart/certs/live_cert_key_pem.txt
+		-
+		-   file must have read and ownership rights, also set secure permissions:
+		-	chown myuser.mygroup live_cert_key_pem.txt
+		-	chmod 0600 live_cert_key_pem.txt
+		-
+		- This API Certificate file is downloaded from PayPal in the Profile->API Access area to the path 
+		- you specify above.
+
+###Version 1.0.4 - PayPalPro - 11-3-08
+
+Added: Implemented PayPal debug messages for express checkout.
+		-Only displayed if the PayPal Error option is turned on in the module config.
+		-Otherwise, a nice clean message is displayed that tells the user
+		-to contact the website administrator.
+		
+Bug Fixes:
+		1. Fixed the indefinite loop in the PayPal Express Checkout when 
+			-an error was sent back from PayPal.
+		2. Fixed error message loop for Express/Direct that would skip error messages 
+			-due to double counting of the loop counter. 
+
+###Version 1.0.3 - PayPalPro - 10-28-08
+
+Added: Re-added CVV choice for ON or OFF. Fully implemented this time.
+
+Added: Payment module now works with coupon discounts.
+
+Added: New error handling method.
+	  -Even if you turn off PayPal errors in the config, a certain few will still be visible to the user. For example for direct payment: Invalid Credit Card
+	  -Invalid CVV Code, Credit Card Declined Message, and so forth.
+      -For example with express checkout: PayPal session timeout errors, PayPal Session already used, PayPal Session exceeded max attempts to process
+	  -and so forth.
+      -With this new error handler, I can add new ones on request. I have added what I think are the primary ones of concern. However,
+      -if you would like to see some others please let me know.
+	  -Also the user is shown a very easy to understand message for the error. Instead, of debug messages that you get with the PayPal Errors On in the config.
+      -Again, I recommend turning off PayPal Errors when going Live so users do not see debug information. With this new method users will still see the most important 
+	  -error messages for the user.
+
+Added: GPL v3.0 License to Zip File. - Should have done this from the beginning, sorry. =[
+
+Notes:
+	Virtuemart 1.1.2 has a known bug of not representing the total order price of items properly with coupon discounts and when it exceeds $100 per order
+		-on the checkout page.
+		-Nevertheless, I have implemented a work around for these issues. So, if you notice the paypal transfer is slightly different it is due to proper
+		-calculation via the PayPalPro payment module. Instead, of using the order total variable provided by Virtuemart which is inaccurate in Virtuemart 1.1.2.
+		-I know for a fact the calculations are correct to do numerous hand calculation with calculators and different check out prices.
+		-It seems somehow Virtuemart is adding more cents than should be or not enough cents at times.
+		
+		-The below examples are of an actual checkout on my test site with the PayPalPro v.1.0.3
+		
+		-For example: take 6 products at $19.99 each and 4 products at $2.99 each. $19.99 x 6 = $119.94, and $2.99 x 4 = $11.96.
+		-So the subtotal should be $131.90. Then say we use a 8.25% sales tax we then calculate $131.90 x 0.0825 to get $10.88
+		-when rounded to 2 decimal places. Virtuemart does calculate the tax amount properly.
+		-Then say we add $6.16 in shipping the total will be $131.90 + $10.88 + $6.16 = $148.94.
+		-However, Virtuemart displays an improper amount usually sometimes like $148.90 or $148.97.
+		-Thus, the order_total variable will have the improper amount at either $148.90 or $148.97.
+		
+		-This also applies to when adding coupons.
+		-For example: let just say we have the same products above with a subtotal of $131.90.
+		-Then we use a coupon that supposedly subtracts $4.00 from the total.
+		-The method used to get around this is to find the total number of products in the cart first: 6 + 4 = 10.
+		-Therefore, we divide the discount $4.00 / 10 = $0.40 per product to subtract. So now we take our original base price:
+		-$19.99 - $0.40 = $19.59 per item for that type, and $2.99 - $0.40 = $2.59 per item for that type.
+		-So if we were to times the new price by 6 and 4 respectively we will get: $117.54 + 10.36 = $127.90
+		-Now if we took the original subtotal of $131.90 - $4.00 = $127.90.
+		-The tax is still calculated based on the original base price of items. So it is still $10.88, and our shipping is still $6.16
+		-Hence, $127.90 + $10.88 + $6.16 = $144.94, but Virtuemart does not calculate the price correctly this time around either.
+		-Again, it will be something like $144.90 or $144.97, and that goes same for the order_total variable.
+		
+		-Just test it out on the demo shopping cart I have setup and you will see how the price changes at the different
+		-checkout processes, when the order is over $100 or when using a coupon. Heck even add the test3 coupon code in and test it with a coupon even.
+		-Then if you want to see if it works setup a beta-developer.paypal.com test account.
+		-and use the express checkout to see how the PayPal total is properly calculated compared to Virtuemarts total.
+	
+###Version 1.0.2 - PayPalPro - 10-27-08
+
+Added: An option to turn off the display of error messages. If they are not displayed they are still written to the debug log file.
+	   Recommened off on Live sites.
+
+Bug Fixes:
+	1. There is a bug in Virtuemart where the order_total variable is not calculated properly when the total order amount exceeds $100.
+		-Implemented work around for correct pricing in the PayPalPro module. So, that PayPal will not throw an Item Amount does not match Order Amount Error.
+		-The work around calculates the order total properly by going through each cart item and getting the original base price.
+		-Then multiplying the price based on quantity of that item. Finally, the tax total and shipping total amounts are added to it.
+		-This creates the proper price.
+		-You will notice on the final confirmation stage of checkout that Virtuemart displays the correct order total.
+		-However, the order total variable that is stored for payment modules is not calculated properly.
+
+###Version 1.0.1 - PayPalPro - 10-11-08
+
+Added: Require Confirmed Address Override Option.
+
+Removed: CVV Check Option - Was not implemented fully. Therefore it has been removed. 
+			    PayPal requires an CVV code for Direct Payment.
+                            CVV code is now required always for Direct Payment.
+
+Bug Fixes:
+
+	1. Fixed spelling error for Live PayPal Express Checkout URL.
+           The URL was missing some letters.
+
+           Caused PayPal Express Checkout not to work for a Live PayPal Account.
+                       
